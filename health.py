@@ -9,7 +9,7 @@ from flask import Flask
 from flask_restful import Resource, Api
 
 
-PORT = int(os.environ['HEALTHCHECK_PORT'])
+PORT = int(os.environ['HEALTHCHECK_PORT']) if os.environ['HEALTHCHECK_PORT'] else 5050
 class __app_base__:
     
     class GUNICORN_APP(gunicorn.app.base.BaseApplication):
