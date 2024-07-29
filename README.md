@@ -6,7 +6,7 @@ Useful tools for building python-based applications in Docker.
 ## Usage
 
 ### Docker Health check wrapper
-The docker health check wrapper can be used in conjunction with your entrypoint by extending the Docker class. Healthchecks can we written as subclasses of the main app class and your entrypoint can be injected via the "entrypoint" function. 
+The docker health check wrapper can be used in conjunction with your entrypoint by extending the Docker class. Healthchecks can be written as subclasses of the main app class and your entrypoint can be injected via the "entrypoint" function. 
 
 #### Setting up health checks in your DockerFile
 Since Docker requires an executable file or entry command to initiate healthchecks, you'll need accommodate this. See below for and example healthcheck executable and assocaited dockerfile snippet.
