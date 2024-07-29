@@ -8,6 +8,7 @@ import multiprocessing as mp
 from flask import Flask
 from flask_restful import Resource, Api
 
+
 PORT = int(os.environ['HEALTHCHECK_PORT'])
 class __app_base__:
     
