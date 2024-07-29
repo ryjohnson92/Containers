@@ -32,9 +32,10 @@ Additional environment variables can be set as follows
 ```yaml
   FROM ubuntu:20.04
   HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD [ "healthcheck" ]
+#   HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD [ "python3.11","./healthcheck.py" ] Optional usage
   ENV HEALTHCHECK_PORT=5050
-  COPY ./healthcheck /usr/local/bin
-  RUN chmod +x /usr/local/bin/healthcheck
+  COPY ./healthcheck /usr/local/bin ## If using alternate usage, this is not required
+  RUN chmod +x /usr/local/bin/healthcheck ## ""
   ENTRYPOINT ['python3.11','./myapp.py']
 ```
 #### Example app (myapp.py)
