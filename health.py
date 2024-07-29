@@ -28,7 +28,8 @@ class __app_base__:
             return self.application
 
     class health_check:
-        def __init__(self) -> None:
+        def __init__(self,app=None) -> None:
+            self.app = app
             assert 'check' in dir(self), 'A healthcheck should have a check function which returns type bool'
             pass
         pass
@@ -56,7 +57,7 @@ class __app_base__:
                         check = getattr(self.app,check_name)
                         rets["services"][check_name if not 'service' in dir(check) else check.service] = {
                             'name':check_name,
-                            "status":"green" if check().check() else "red"
+                            "status":"green" if check(self.app).check() else "red"
                         }
                     except Exception as err:
                         self.app.log.exception(err)
