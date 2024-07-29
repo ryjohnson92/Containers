@@ -1,18 +1,24 @@
 
 # Containers Module (Python)
 
-Useful tools for building python based applications in Docker.
+Useful tools for building python-based applications in Docker.
 
+## Usage
 
-## Environment Variables & Setup
+### Docker Health check wrapper
+The docker health check wrapper can be used in conjunction with your entrypoint by extending the Docker class. Healthchecks can we written as subclasses of the main app class and your entrypoint can be injected via the "entrypoint" function. 
 
-To run this project, you will need to add the following variables in your environment.
+#### Setting up health checks in your DockerFile
+Since Docker requires an executable file or entry command to initiate healthchecks, you'll need accommodate this. See below for and example healthcheck executable and assocaited dockerfile snippet.
+#### * Optional Environment setup
+Additional environment variables can be set as follows
 
-`HEALTHCHECK_PORT` - int - Used to determine which port to serve healthchecks from. Defaults to 5050
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| HEALTHCHECK_PORT | int | Used to determine which port to serve healthchecks from. Defaults to 5050 |
+| BUILD_VERSION | str | build version |
 
-#### Setting up healthchecks in your DockerFile
-Since docker requires an executable file or entry command to initiate healthchecks, you'll need to add this. See below for and example healthcheck executable and assocaited dockerfile snippet.
-
+#### Healthcheck Executable (Docker)
 ```python
   #!/usr/bin/env python3.11
   import sys
@@ -22,19 +28,16 @@ Since docker requires an executable file or entry command to initiate healthchec
   ### Containers.health.Docker as a base class
   sys.exit(Docker.read_healthchecks())
 ```
-
+#### Dockerfile (Docker)
 ```yaml
   FROM ubuntu:20.04
   HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD [ "healthcheck" ]
   ENV HEALTHCHECK_PORT=5050
   COPY ./healthcheck /usr/local/bin
   RUN chmod +x /usr/local/bin/healthcheck
+  ENTRYPOINT ['python3.11','./myapp.py']
 ```
-## Usage
-
-#### Docker Health check wrapper
-The docker health check wrapper can be used in conjunction with your entrypoint by extending the Docker class. Healthchecks can we written as subclasses of the main app class and your entrypoint can be injected via the "entrypoint" function. 
-
+#### Example app (myapp.py)
 ```python
   import time
   from Containers.health import Docker
@@ -49,6 +52,7 @@ The docker health check wrapper can be used in conjunction with your entrypoint 
               return True
           pass
       class youreWrong(Docker.health_check):
+          ### This check fails to load due to incorrect naming convention
           def acheck(self):
               return False
           pass
@@ -62,10 +66,7 @@ The docker health check wrapper can be used in conjunction with your entrypoint 
 
   if __name__ == '__main__':
       myapp()
-
 ```
-
-
 
 ## API Reference
 
@@ -76,8 +77,23 @@ The docker health check wrapper can be used in conjunction with your entrypoint 
   GET /health_check.json
 ```
 
-| Parameter | Type     | Description                |
-| :-------- | :------- | :------------------------- |
-| `api_key` | `string` | **Required**. Your API key |
+```json
+  {
+    "name": "myapp",
+    "services": {
+      "MyCustomCheck": {
+        "name": "MyCustomCheck",
+        "status": "green"
+      },
+      "MyCustomCheck2": {
+        "name": "MyCustomCheck2",
+        "status": "green"
+      }
+    },
+    "metadata": {
+      "build": "unknown"
+    }
+  }
+```
 
 
