@@ -1,17 +1,34 @@
 
 import gunicorn.app.base
-import re
-import os
+import re,time
+import os,json
 import logging
 import requests
+from datetime import datetime, timezone
 import multiprocessing as mp
 from flask import Flask
 from flask_restful import Resource, Api
 
+SLSA_GC_LOCAL_CACHE_ENABLED = bool(os.environ.get('SLSA_HC_TEST_SITE', 'true'))
+SLSA_GC_LOCAL_CACHE_TIMEOUT_SECONDS = int(os.getenv('SLSA_GC_LOCAL_CACHE_TIMEOUT_SECONDS', '60'))
 
 PORT = int(os.environ['HEALTHCHECK_PORT']) if os.environ['HEALTHCHECK_PORT'] else 5050
-class __app_base__:
+
+CACHED_VALUE = None
+class JSON_CACHE:
+    def __init__(self,value):
+        self.created_time = time.time()
+        self.created_at = datetime.now(timezone.utc)
+        value['is_cached'] = True
+        self.value = json.dumps(value)
     
+    def __bool__(self):
+        return not (time.time() - self.created_time) > SLSA_GC_LOCAL_CACHE_TIMEOUT_SECONDS
+
+    def __str__(self):
+        return self.value
+
+class __app_base__:
     class GUNICORN_APP(gunicorn.app.base.BaseApplication):
         def __init__(self, app, options=None):
             self.options = options or {}
@@ -42,6 +59,7 @@ class __app_base__:
                 self.app = app
                 super().__init__()
             def get(self):
+                global CACHED_VALUE
                 rets = {
                     "name":self.app.__class__.__name__,
                     "services":{
@@ -51,20 +69,25 @@ class __app_base__:
                         "build": os.environ.get('BUILD_VERSION') if os.environ.get('BUILD_VERSION') else "unknown"
                     }
                 }
-                for check in self.parent.CHECKS:
-                    try:
-                        check_name = check
-                        check = getattr(self.app,check_name)
-                        rets["services"][check_name if not 'service' in dir(check) else check.service] = {
-                            'name':check_name,
-                            "status":"green" if check(self.app).check() else "red"
-                        }
-                    except Exception as err:
-                        self.app.log.exception(err)
-                for service in rets["services"]:
-                    if rets["services"][service]["status"] != 'green':
-                        rets['current_status'] = 'red'
-                        break
+                if CACHED_VALUE is not None and bool(CACHED_VALUE):
+                    rets = json.loads(str(CACHED_VALUE))
+                    CACHED_VALUE = None
+                else:
+                    for check in self.parent.CHECKS:
+                        try:
+                            check_name = check
+                            check = getattr(self.app,check_name)
+                            rets["services"][check_name if not 'service' in dir(check) else check.service] = {
+                                'name':check_name,
+                                "status":"green" if check(self.app).check() else "red"
+                            }
+                        except Exception as err:
+                            self.app.log.exception(err)
+                    for service in rets["services"]:
+                        if rets["services"][service]["status"] != 'green':
+                            rets['current_status'] = 'red'
+                            break
+                    CACHED_VALUE = JSON_CACHE(rets)
                 return rets
     
         def __init__(self,parent) -> None:
@@ -120,6 +143,9 @@ class __app_base__:
             GUNICORNPROC.join()
             GUNICORNPROC.terminate()
             os.system('pkill -9 python3.11') ## :'( 
+
+
+
 
 class Docker(__app_base__):
     def __init__(self, health_check_external: bool = False,**kwargs):
